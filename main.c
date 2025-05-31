@@ -1,4 +1,3 @@
-// main.c - Simple GTK File Browser
 #include <gtk/gtk.h>
 #include <dirent.h>
 #include <string.h>
@@ -15,27 +14,15 @@ int handle_file(const char *file_path) {
     char* file_type = strrchr(file_path, '.');
     pid_t pid;
     if (file_type && strcmp(file_type, ".txt") == 0) {
-        pid = fork();
-        if (pid == 0) {
-            execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
-            _exit(127);
-        }
+        execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
     } else if (file_type && (strcmp(file_type, ".png") == 0 || 
                strcmp(file_type, ".jpg") == 0 || 
                strcmp(file_type, ".jpeg") == 0)) {
-        pid = fork();
-        if (pid == 0) {
-            execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
-            _exit(127);
-        }
+        execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
     } else if (file_type && strcmp(file_type, ".pdf") == 0) {
-        pid = fork();
-        if (pid == 0) {
-            execl("/usr/bin/xpdf", "xpdf", file_path, (char*)NULL);
-            _exit(127);
-        }
+        execl("/usr/bin/xpdf", "xpdf", file_path, (char*)NULL);
     } else {
-        g_print("File clicked: %s\n, file type: %s\n", file_path, file_type);
+        g_print("File type not supported: %s\n, file type: %s\n", file_path, file_type);
     }
     return 0;
 }
@@ -50,8 +37,6 @@ void on_entry_button_clicked(GtkButton *button , gpointer user_data) {
         gtk_window_set_title(GTK_WINDOW(window), current_path);
     } else {
         handle_file(full_path);
-
-        // Optionally: handle file click (open, etc.)
     }
 }
 
@@ -124,7 +109,7 @@ int main(int argc, char *argv[]) {
         strncpy(initial_path, argv[1], sizeof(initial_path) - 1);
 
     } else if (argc != 1){
-        fprintf(stderr, "Usage: %s [path]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <optional>[path]\n", argv[1]);
         return 1;
     }
 
@@ -155,6 +140,7 @@ int main(int argc, char *argv[]) {
         gtk_widget_set_size_request(vscrollbar, 24, -1); // 24px wide
     }
 
+    // Create the main layout
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_pack_start(GTK_BOX(vbox), up_button, FALSE, FALSE, 5);
     gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 5);
