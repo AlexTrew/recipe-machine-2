@@ -9,18 +9,47 @@ GtkWidget *up_button;
 char current_path[4096] = ".";
 char initial_path[4095] = ".";
 
+void on_entry_button_clicked(GtkButton *button, gpointer user_data);
+void populate_list(const char *path);
+void set_button_font(GtkWidget *btn, int pt_size);
+int open_subprocess(const char *command, const char *arg);
+int handle_file(const char *file_path);
+void on_up_dir_button_clicked(GtkButton *button, gpointer user_data);
+void on_window_destroy();
+
+
+void set_button_font(GtkWidget *btn, int pt_size) {
+    GtkStyleContext *context = gtk_widget_get_style_context(btn);
+    GtkCssProvider *provider = gtk_css_provider_new();
+    char css[64];
+    snprintf(css, sizeof(css), "button { font-size: %dpt; }", pt_size);
+    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    g_object_unref(provider);
+}
+
+int open_subprocess(const char *command, const char *arg) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        execl(command, command, arg, (char *)NULL);
+    } else if (pid < 0) {
+        perror("fork failed");
+        return -1;
+    }
+    return 0;
+}
 
 int handle_file(const char *file_path) {
     char* file_type = strrchr(file_path, '.');
     pid_t pid;
     if (file_type && strcmp(file_type, ".txt") == 0) {
-        execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
+        open_subprocess("/usr/bin/nedit", file_path);
     } else if (file_type && (strcmp(file_type, ".png") == 0 || 
                strcmp(file_type, ".jpg") == 0 || 
                strcmp(file_type, ".jpeg") == 0)) {
-        execl("/usr/bin/xdg-open", "xdg-open", file_path, (char*)NULL);
+        open_subprocess("/usr/bin/feh", file_path);
     } else if (file_type && strcmp(file_type, ".pdf") == 0) {
-        execl("/usr/bin/xpdf", "xpdf", file_path, (char*)NULL);
+        open_subprocess("/usr/bin/xpdf", file_path);
     } else {
         g_print("File type not supported: %s\n, file type: %s\n", file_path, file_type);
     }
@@ -60,10 +89,7 @@ void populate_list(const char *path) {
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
         GtkWidget *btn = gtk_button_new_with_label(entry->d_name);
         gtk_widget_set_size_request(btn, 400, 50);
-        PangoFontDescription *font_desc = pango_font_description_from_string("16");
-        GtkWidget *btn_label = gtk_bin_get_child(GTK_BIN(btn));
-        gtk_widget_override_font(btn_label, font_desc);
-        pango_font_description_free(font_desc);
+        set_button_font(btn, 14);
         g_object_set_data(G_OBJECT(btn), "full_path", g_strdup(full_path));
         g_signal_connect(btn, "clicked", G_CALLBACK(on_entry_button_clicked), NULL);
         gtk_box_pack_start(GTK_BOX(list_box), btn, FALSE, FALSE, 5);
@@ -105,7 +131,7 @@ int main(int argc, char *argv[]) {
     //parse args
     if (argc == 2) {
         strncpy(current_path, argv[1], sizeof(current_path) - 1);
-        current_path[sizeof(current_path) - 1] = '\0'; // ensure null termination
+        current_path[sizeof(current_path) - 1] = '\0'; 
         strncpy(initial_path, argv[1], sizeof(initial_path) - 1);
 
     } else if (argc != 1){
@@ -122,10 +148,7 @@ int main(int argc, char *argv[]) {
 
     // initialize the ui elements
     up_button = gtk_button_new_with_label("Back");
-    GtkWidget *up_label = gtk_bin_get_child(GTK_BIN(up_button));
-    PangoFontDescription *font_desc = pango_font_description_from_string("16");
-    gtk_widget_override_font(up_label, font_desc);
-    pango_font_description_free(font_desc); // free font_desc after use
+    set_button_font(up_button, 16);
     gtk_widget_set_size_request(up_button, 100, 50);
     g_signal_connect(up_button, "clicked", G_CALLBACK(on_up_dir_button_clicked), NULL);
 
