@@ -6,6 +6,10 @@
 GtkWidget *list_box;
 GtkWidget *window;
 GtkWidget *up_button;
+GtkWidget *scroll;
+GtkWidget *vscrollbar;
+GtkWidget *vbox;
+
 char current_path[4096] = ".";
 char initial_path[4095] = ".";
 
@@ -20,12 +24,17 @@ void on_window_destroy();
 
 void set_button_font(GtkWidget *btn, int pt_size) {
     GtkStyleContext *context = gtk_widget_get_style_context(btn);
-    GtkCssProvider *provider = gtk_css_provider_new();
+    static GtkCssProvider *provider = NULL;
+    static int last_pt_size = 0;
     char css[64];
-    snprintf(css, sizeof(css), "button { font-size: %dpt; }", pt_size);
-    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+    if (!provider || last_pt_size != pt_size) {
+        if (provider) g_object_unref(provider);
+        provider = gtk_css_provider_new();
+        snprintf(css, sizeof(css), "button { font-size: %dpt; }", pt_size);
+        gtk_css_provider_load_from_data(provider, css, -1, NULL);
+        last_pt_size = pt_size;
+    }
     gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
-    g_object_unref(provider);
 }
 
 int open_subprocess(const char *command, const char *arg) {
@@ -37,6 +46,14 @@ int open_subprocess(const char *command, const char *arg) {
         return -1;
     }
     return 0;
+}
+
+void clear_button_list() {
+    GList *children = gtk_container_get_children(GTK_CONTAINER(list_box));
+    for (GList *iter = children; iter != NULL; iter = g_list_next(iter)) {
+        gtk_widget_destroy(GTK_WIDGET(iter->data));
+    }
+    g_list_free(children);
 }
 
 int handle_file(const char *file_path) {
@@ -71,12 +88,7 @@ void on_entry_button_clicked(GtkButton *button , gpointer user_data) {
 
 void populate_list(const char *path) {
     // Clear the current list box
-    GList *iter;
-    GList *children = gtk_container_get_children(GTK_CONTAINER(list_box));
-    for (iter = children; iter != NULL; iter = g_list_next(iter)) {
-        gtk_widget_destroy(GTK_WIDGET(iter->data));
-    }
-    g_list_free(children);
+    clear_button_list();
 
     // re populate the list box with current directory contents
     DIR *dir = opendir(path);
@@ -88,6 +100,8 @@ void populate_list(const char *path) {
         char full_path[4096];
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
         GtkWidget *btn = gtk_button_new_with_label(entry->d_name);
+        g_object_ref_sink(G_OBJECT(btn));
+
         gtk_widget_set_size_request(btn, 400, 50);
         set_button_font(btn, 14);
         g_object_set_data(G_OBJECT(btn), "full_path", g_strdup(full_path));
@@ -120,9 +134,7 @@ void on_up_dir_button_clicked(GtkButton *button, gpointer user_data) {
 }
 
 void on_window_destroy() {
-    gtk_widget_destroy(up_button);
-    gtk_widget_destroy(list_box);
-    gtk_widget_destroy(window);
+    clear_button_list();
     gtk_main_quit();
 }
 
@@ -142,12 +154,14 @@ int main(int argc, char *argv[]) {
     // initialise window and GTK
     gtk_init(&argc, &argv);
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
     gtk_window_set_title(GTK_WINDOW(window), current_path);
     gtk_window_set_default_size(GTK_WINDOW(window), 599, 400);
     g_signal_connect(window, "destroy", G_CALLBACK(on_window_destroy), NULL);
 
     // initialize the ui elements
     up_button = gtk_button_new_with_label("Back");
+
     set_button_font(up_button, 16);
     gtk_widget_set_size_request(up_button, 100, 50);
     g_signal_connect(up_button, "clicked", G_CALLBACK(on_up_dir_button_clicked), NULL);
@@ -155,16 +169,18 @@ int main(int argc, char *argv[]) {
     list_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 
     //scroll bar
-    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+    scroll = gtk_scrolled_window_new(NULL, NULL);
+
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
     gtk_container_add(GTK_CONTAINER(scroll), list_box);
-    GtkWidget *vscrollbar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scroll));
+    vscrollbar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scroll));
     if (vscrollbar) {
         gtk_widget_set_size_request(vscrollbar, 24, -1); // 24px wide
     }
 
     // Create the main layout
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+
     gtk_box_pack_start(GTK_BOX(vbox), up_button, FALSE, FALSE, 5);
     gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 5);
     gtk_container_add(GTK_CONTAINER(window), vbox);
@@ -172,5 +188,6 @@ int main(int argc, char *argv[]) {
     populate_list(current_path);
     gtk_widget_show_all(window);
     gtk_main();
+
     return 0;
 }
