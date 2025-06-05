@@ -22,6 +22,8 @@ int open_subprocess(const char *command, const char *arg);
 int handle_file(const char *file_path);
 void on_up_dir_button_clicked(GtkButton *button, gpointer user_data);
 void on_window_destroy();
+void on_scroll_up_clicked(GtkButton *button, gpointer user_data);
+void on_scroll_down_clicked(GtkButton *button, gpointer user_data);
 
 
 void set_button_font(GtkWidget *btn, int pt_size) {
@@ -140,6 +142,20 @@ void on_window_destroy() {
     gtk_main_quit();
 }
 
+void on_scroll_up_clicked(GtkButton *button, gpointer user_data) {
+    GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scroll));
+    gdouble value = gtk_adjustment_get_value(vadj);
+    gdouble step = gtk_adjustment_get_step_increment(vadj);
+    gtk_adjustment_set_value(vadj, value - step);
+}
+
+void on_scroll_down_clicked(GtkButton *button, gpointer user_data) {
+    GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scroll));
+    gdouble value = gtk_adjustment_get_value(vadj);
+    gdouble step = gtk_adjustment_get_step_increment(vadj);
+    gtk_adjustment_set_value(vadj, value + step);
+}
+
 int main(int argc, char *argv[]) {
 
     //parse args
@@ -180,11 +196,30 @@ int main(int argc, char *argv[]) {
         gtk_widget_set_size_request(vscrollbar, 24, -1); // 24px wide
     }
 
-    // Create the main layout
-    vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    // Create up and down scroll buttons
+    GtkWidget *scroll_up_btn = gtk_button_new_with_label("▲");
+    GtkWidget *scroll_down_btn = gtk_button_new_with_label("▼");
+    gtk_widget_set_size_request(scroll_up_btn, 50, 40);
+    gtk_widget_set_size_request(scroll_down_btn, 50, 40);
+    set_button_font(scroll_up_btn, 18);
+    set_button_font(scroll_down_btn, 18);
+    g_signal_connect(scroll_up_btn, "clicked", G_CALLBACK(on_scroll_up_clicked), NULL);
+    g_signal_connect(scroll_down_btn, "clicked", G_CALLBACK(on_scroll_down_clicked), NULL);
 
+    // Place up/down buttons in a vertical box
+    GtkWidget *scroll_btn_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_box_pack_start(GTK_BOX(scroll_btn_box), scroll_up_btn, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(scroll_btn_box), scroll_down_btn, FALSE, FALSE, 2);
+
+    // Create a horizontal box for main content and scroll buttons
+    GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(hbox), scroll, TRUE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(hbox), scroll_btn_box, FALSE, FALSE, 5);
+
+    // Main vertical layout
+    vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_pack_start(GTK_BOX(vbox), up_button, FALSE, FALSE, 5);
-    gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 5);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 5);
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
     populate_list(current_path);
