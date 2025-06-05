@@ -5,10 +5,12 @@
 
 GtkWidget *list_box;
 GtkWidget *window;
-GtkWidget *up_button;
+
 GtkWidget *scroll;
 GtkWidget *vscrollbar;
+GtkCssProvider *provider = NULL;
 GtkWidget *vbox;
+GtkWidget *up_button;
 
 char current_path[4096] = ".";
 char initial_path[4095] = ".";
@@ -24,15 +26,11 @@ void on_window_destroy();
 
 void set_button_font(GtkWidget *btn, int pt_size) {
     GtkStyleContext *context = gtk_widget_get_style_context(btn);
-    static GtkCssProvider *provider = NULL;
-    static int last_pt_size = 0;
     char css[64];
-    if (!provider || last_pt_size != pt_size) {
-        if (provider) g_object_unref(provider);
+    if (!provider) {
         provider = gtk_css_provider_new();
         snprintf(css, sizeof(css), "button { font-size: %dpt; }", pt_size);
         gtk_css_provider_load_from_data(provider, css, -1, NULL);
-        last_pt_size = pt_size;
     }
     gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
 }
@@ -134,6 +132,10 @@ void on_up_dir_button_clicked(GtkButton *button, gpointer user_data) {
 }
 
 void on_window_destroy() {
+    if (provider) {
+        g_object_ref_sink(G_OBJECT(provider));
+        g_object_unref(provider);
+    }
     clear_button_list();
     gtk_main_quit();
 }
