@@ -18,7 +18,7 @@ char initial_path[4095] = ".";
 void on_entry_button_clicked(GtkButton *button, gpointer user_data);
 void populate_list(const char *path);
 void set_button_font(GtkWidget *btn, int pt_size);
-int open_subprocess(const char *command, const char *arg);
+int open_subprocess(const char *argv[]);
 int handle_file(const char *file_path);
 void on_up_dir_button_clicked(GtkButton *button, gpointer user_data);
 void on_window_destroy();
@@ -37,10 +37,12 @@ void set_button_font(GtkWidget *btn, int pt_size) {
     gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
 }
 
-int open_subprocess(const char *command, const char *arg) {
+// Accepts a NULL-terminated array of arguments (argv[0] is program, argv[1..] are args, argv[n]=NULL)
+int open_subprocess(const char *argv[]) {
     pid_t pid = fork();
     if (pid == 0) {
-        execl(command, command, arg, (char *)NULL);
+        execv(argv[0], (char * const *)argv);
+        _exit(127); // exec failed
     } else if (pid < 0) {
         perror("fork failed");
         return -1;
@@ -56,17 +58,20 @@ void clear_button_list() {
     g_list_free(children);
 }
 
+// Update handle_file to use the new open_subprocess signature
 int handle_file(const char *file_path) {
     char* file_type = strrchr(file_path, '.');
-    pid_t pid;
     if (file_type && strcmp(file_type, ".txt") == 0) {
-        open_subprocess("/usr/bin/nedit", file_path);
+        const char *argv[] = {"/usr/bin/nedit", file_path, NULL};
+        open_subprocess(argv);
     } else if (file_type && (strcmp(file_type, ".png") == 0 || 
                strcmp(file_type, ".jpg") == 0 || 
                strcmp(file_type, ".jpeg") == 0)) {
-        open_subprocess("/usr/bin/feh", file_path);
+        const char *argv[] = {"/usr/bin/feh", file_path, NULL};
+        open_subprocess(argv);
     } else if (file_type && strcmp(file_type, ".pdf") == 0) {
-        open_subprocess("/usr/bin/xpdf", file_path);
+        const char *argv[] = {"/usr/bin/xpdf", "-g 1024x570+0+0", file_path, NULL};
+        open_subprocess(argv);
     } else {
         g_print("File type not supported: %s\n, file type: %s\n", file_path, file_type);
     }
