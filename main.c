@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 #include <dirent.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -86,6 +87,17 @@ void on_entry_button_clicked(GtkButton *button , gpointer user_data) {
     }
 }
 
+void create_button(char* full_path, char* label) {
+
+    printf("dname after %s\n", label);
+    GtkWidget *btn = gtk_button_new_with_label(label);
+    gtk_widget_set_size_request(btn, 400, 50);
+    set_button_font(btn, 14);
+    g_object_set_data(G_OBJECT(btn), "full_path", g_strdup(full_path));
+    g_signal_connect(btn, "clicked", G_CALLBACK(on_entry_button_clicked), NULL);
+    gtk_box_pack_start(GTK_BOX(list_box), btn, FALSE, FALSE, 5);
+}
+
 void populate_list(const char *path) {
     // Clear the current list box
     clear_button_list();
@@ -97,16 +109,24 @@ void populate_list(const char *path) {
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-        char full_path[4096];
-        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
-        GtkWidget *btn = gtk_button_new_with_label(entry->d_name);
-        g_object_ref_sink(G_OBJECT(btn));
 
-        gtk_widget_set_size_request(btn, 400, 50);
-        set_button_font(btn, 14);
-        g_object_set_data(G_OBJECT(btn), "full_path", g_strdup(full_path));
-        g_signal_connect(btn, "clicked", G_CALLBACK(on_entry_button_clicked), NULL);
-        gtk_box_pack_start(GTK_BOX(list_box), btn, FALSE, FALSE, 5);
+	char full_path[4096];
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
+	
+	// remove the file extension
+	char* file_extension = strrchr(entry->d_name, '.');
+	char file_without_extension[4096];
+
+	/*check that the last '.' isnt the first char ie a hidden file*/
+	if (file_extension && entry->d_name != file_extension){
+	    size_t label_len = strlen(entry->d_name) - strlen(file_extension);
+	    strncpy(file_without_extension, entry->d_name, label_len);
+	    file_without_extension[label_len] = '\0';
+	    create_button(full_path, file_without_extension);
+	}
+	else{
+	    create_button(full_path, entry->d_name);
+	}
     }
     closedir(dir);
     gtk_widget_show_all(list_box);
