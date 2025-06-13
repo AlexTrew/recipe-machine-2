@@ -42,9 +42,14 @@ void set_button_font(GtkWidget *btn, int pt_size) {
 
 int open_subprocess(const char *command, const char *arg) {
     pid_t pid = fork();
-    if (pid == 0) {
+    if (pid > 0) {
+      // let the browser process sleep for a second to stop a user opening multiple subprocesses
+      sleep(1);
+    }
+    else if (pid == 0) {
         execl(command, command, arg, (char *)NULL);
-    } else if (pid < 0) {
+	_exit(-1);
+    } else {
         perror("fork failed");
         return -1;
     }
@@ -90,8 +95,6 @@ void on_entry_button_clicked(GtkButton *button , gpointer user_data) {
 }
 
 void create_button(char* full_path, char* label) {
-
-    printf("dname after %s\n", label);
     GtkWidget *btn = gtk_button_new_with_label(label);
     gtk_widget_set_size_request(btn, 400, 50);
     set_button_font(btn, 14);
