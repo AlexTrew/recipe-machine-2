@@ -16,6 +16,8 @@ GtkWidget *up_button;
 char current_path[4096] = ".";
 char initial_path[4095] = ".";
 
+
+void create_button(char* full_path, char* label);
 void on_entry_button_clicked(GtkButton *button, gpointer user_data);
 void populate_list(const char *path);
 void set_button_font(GtkWidget *btn, int pt_size);
