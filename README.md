@@ -4,7 +4,7 @@ or messing about with your phone in the kitchen.
 
 This repo consists of:
 
-- a touch screen file browser for running on touchscreen systems with low power and scarce resources
+- a file browser for running on touchscreen systems with low power and scarce resources
 - a splash screen to be displayed when the machine falls asleep and boots up
 
 Will be added in future:
