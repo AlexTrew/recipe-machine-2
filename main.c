@@ -19,6 +19,7 @@ char initial_path[4095] = ".";
 
 void create_button(char* full_path, char* label);
 void on_entry_button_clicked(GtkButton *button, gpointer user_data);
+void on_refresh_button_clicked(GtkButton *button, gpointer user_data);
 void populate_list(const char *path);
 void set_button_font(GtkWidget *btn, int pt_size);
 int open_subprocess(const char *command, const char *arg);
@@ -94,6 +95,12 @@ void on_entry_button_clicked(GtkButton *button , gpointer user_data) {
     }
 }
 
+
+void on_refresh_button_clicked(GtkButton *button, gpointer user_data){
+    populate_list(current_path);
+}
+
+
 void create_button(char* full_path, char* label) {
     GtkWidget *btn = gtk_button_new_with_label(label);
     gtk_widget_set_size_request(btn, 400, 50);
@@ -105,6 +112,7 @@ void create_button(char* full_path, char* label) {
 
 void populate_list(const char *path) {
     // Clear the current list box
+    printf("current directory %s\n", path);
     clear_button_list();
 
     // re populate the list box with current directory contents
@@ -231,15 +239,24 @@ int main(int argc, char *argv[]) {
     g_signal_connect(scroll_up_btn, "clicked", G_CALLBACK(on_scroll_up_clicked), NULL);
     g_signal_connect(scroll_down_btn, "clicked", G_CALLBACK(on_scroll_down_clicked), NULL);
 
+
     // Place up/down buttons in a vertical box
-    GtkWidget *scroll_btn_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_box_pack_start(GTK_BOX(scroll_btn_box), scroll_up_btn, FALSE, FALSE, 2);
-    gtk_box_pack_start(GTK_BOX(scroll_btn_box), scroll_down_btn, FALSE, FALSE, 2);
+    GtkWidget *right_side_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_box_pack_start(GTK_BOX(right_side_box), scroll_up_btn, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(right_side_box), scroll_down_btn, FALSE, FALSE, 2);
+
+
+    // refresh page button
+    GtkWidget *refresh_button = gtk_button_new_with_label("↻");
+    set_button_font(refresh_button, 24);
+    g_signal_connect(refresh_button, "clicked", G_CALLBACK(on_refresh_button_clicked), NULL);
+    gtk_box_pack_start(GTK_BOX(right_side_box), refresh_button, FALSE, FALSE, 2);
+
 
     // Create a horizontal box for main content and scroll buttons
     GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     gtk_box_pack_start(GTK_BOX(hbox), scroll, TRUE, TRUE, 0);
-    gtk_box_pack_end(GTK_BOX(hbox), scroll_btn_box, FALSE, FALSE, 5);
+    gtk_box_pack_end(GTK_BOX(hbox), right_side_box, FALSE, FALSE, 5);
 
     // Main vertical layout
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
