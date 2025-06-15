@@ -4,4 +4,8 @@ recipe-machine-2-aarch64
 .github
 .gitigore
 .cache
-CMakeFiles
+CMake*
+cmake*
+compile_commands.json
+!CMakeLists.txt
+MakeFile
