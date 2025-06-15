@@ -8,4 +8,4 @@ CMake*
 cmake*
 compile_commands.json
 !CMakeLists.txt
-MakeFile
+Makefile
