@@ -13,6 +13,8 @@ GtkCssProvider *provider = NULL;
 GtkWidget *vbox;
 GtkWidget *up_button;
 
+size_t MAX_BUF_SIZE = 4096;
+
 char current_path[4096] = ".";
 char initial_path[4095] = ".";
 
@@ -67,13 +69,12 @@ void clear_button_list() {
 
 int handle_file(const char *file_path) {
     char* file_type = strrchr(file_path, '.');
-    pid_t pid;
     if (file_type && strcmp(file_type, ".txt") == 0) {
         open_subprocess("/usr/bin/nedit", file_path);
     } else if (file_type && (strcmp(file_type, ".png") == 0 || 
                strcmp(file_type, ".jpg") == 0 || 
                strcmp(file_type, ".jpeg") == 0)) {
-        open_subprocess("/usr/bin/feh", file_path);
+        open_subprocess("/usr/bin/eog", file_path);
     } else if (file_type && strcmp(file_type, ".pdf") == 0) {
         open_subprocess("/usr/bin/xpdf", file_path);
     } else {
@@ -110,8 +111,7 @@ void create_button(char* full_path, char* label) {
     gtk_box_pack_start(GTK_BOX(list_box), btn, FALSE, FALSE, 5);
 }
 
-void populate_list(const char *path) {
-    // Clear the current list box
+void populate_list(const char *path) {// Clear the current list box
     printf("current directory %s\n", path);
     clear_button_list();
 
@@ -121,9 +121,15 @@ void populate_list(const char *path) {
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+
+	if (strnlen(entry->d_name, MAX_BUF_SIZE) == MAX_BUF_SIZE){
+	    printf("Unterminated filename! exiting...\n");
+	    return;
+	}
+	
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
-	char full_path[4096];
+	char full_path[MAX_BUF_SIZE];
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 	
 	// remove the file extension
@@ -193,9 +199,13 @@ int main(int argc, char *argv[]) {
 
     //parse args
     if (argc == 2) {
-        strncpy(current_path, argv[1], sizeof(current_path) - 1);
-        current_path[sizeof(current_path) - 1] = '\0'; 
-        strncpy(initial_path, argv[1], sizeof(initial_path) - 1);
+	// ensure args are null terminated
+	size_t input_buf_limit = 4096;
+	if (strnlen(argv[1], input_buf_limit) == input_buf_limit){
+	    return -1;
+	}
+        strcpy(current_path, argv[1]);
+        strcpy(initial_path, argv[1]);
 
     } else if (argc != 1){
         fprintf(stderr, "Usage: %s <optional>[path]\n", argv[1]);
@@ -211,7 +221,7 @@ int main(int argc, char *argv[]) {
     g_signal_connect(window, "destroy", G_CALLBACK(on_window_destroy), NULL);
 
     // initialize the ui elements
-    up_button = gtk_button_new_with_label("Back");
+    up_button = gtk_button_new_with_label("🡅");
 
     set_button_font(up_button, 16);
     gtk_widget_set_size_request(up_button, 100, 50);
@@ -229,7 +239,16 @@ int main(int argc, char *argv[]) {
         gtk_widget_set_size_request(vscrollbar, 24, -1); // 24px wide
     }
 
-    // Create up and down scroll buttons
+    // buttons on the right pane
+    GtkWidget *right_side_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+
+    // refresh page button
+    GtkWidget *refresh_button = gtk_button_new_with_label("↻");
+    set_button_font(refresh_button, 24);
+    g_signal_connect(refresh_button, "clicked", G_CALLBACK(on_refresh_button_clicked), NULL);
+    gtk_box_pack_start(GTK_BOX(right_side_box), refresh_button, FALSE, FALSE, 2);
+
+    // up and down scroll buttons
     GtkWidget *scroll_up_btn = gtk_button_new_with_label("▲");
     GtkWidget *scroll_down_btn = gtk_button_new_with_label("▼");
     gtk_widget_set_size_request(scroll_up_btn, 50, 40);
@@ -239,19 +258,8 @@ int main(int argc, char *argv[]) {
     g_signal_connect(scroll_up_btn, "clicked", G_CALLBACK(on_scroll_up_clicked), NULL);
     g_signal_connect(scroll_down_btn, "clicked", G_CALLBACK(on_scroll_down_clicked), NULL);
 
-
-    // Place up/down buttons in a vertical box
-    GtkWidget *right_side_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_pack_start(GTK_BOX(right_side_box), scroll_up_btn, FALSE, FALSE, 2);
     gtk_box_pack_start(GTK_BOX(right_side_box), scroll_down_btn, FALSE, FALSE, 2);
-
-
-    // refresh page button
-    GtkWidget *refresh_button = gtk_button_new_with_label("↻");
-    set_button_font(refresh_button, 24);
-    g_signal_connect(refresh_button, "clicked", G_CALLBACK(on_refresh_button_clicked), NULL);
-    gtk_box_pack_start(GTK_BOX(right_side_box), refresh_button, FALSE, FALSE, 2);
-
 
     // Create a horizontal box for main content and scroll buttons
     GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
