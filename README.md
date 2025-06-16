@@ -1,5 +1,5 @@
-Utilities for running "recipe machine". 
-"Recipe machine" is a raspberry pi 3 that sits in my kitchen and displays recipes. Its more convenient than juggling cookbooks
+# Utilities for running "Recipe Machine". 
+"Recipe Machine" is a raspberry pi 3 that sits in my kitchen and displays recipes. Its more convenient than juggling cookbooks
 or messing about with your phone in the kitchen. 
 
 This repo consists of:
